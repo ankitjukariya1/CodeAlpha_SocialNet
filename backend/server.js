@@ -5,6 +5,8 @@ const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const morgan = require('morgan');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -12,8 +14,16 @@ const userRoutes = require('./routes/users');
 const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const tagRoutes = require('./routes/tags');
+const { errorHandler, notFound } = require('./middleware/errorHandler');
 
 const app = express();
+
+// Logging middleware
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined'));
+}
 
 // Security Middleware
 app.use(helmet({
@@ -45,6 +55,9 @@ app.use(express.urlencoded({ extended: true }));
 // Data sanitization against NoSQL injection
 app.use(mongoSanitize());
 
+// Data sanitization against XSS
+app.use(xss());
+
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -65,6 +78,10 @@ app.use('/api/tags', tagRoutes);
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
+
+// Error handling middleware (must be last)
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5002; 
 app.listen(PORT, () => {

@@ -39,4 +39,10 @@ const postSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Indexes for better query performance
+postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ tags: 1 });
+postSchema.index({ createdAt: -1 });
+postSchema.index({ likesCount: -1 });
+
 module.exports = mongoose.model('Post', postSchema);

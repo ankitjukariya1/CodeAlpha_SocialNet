@@ -46,15 +46,24 @@ const getFeedPosts = async (req, res) => {
     const currentUser = await User.findById(req.user.id);
     const followingIds = currentUser.following; 
 
+    const totalPosts = await Post.countDocuments();
+    
     // Show all posts (including user's own posts) sorted by most recent
     const posts = await Post.find()
       .populate('author', 'username fullName avatar')
       .populate('tags', 'name')
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean(); // Use lean for better performance
 
-    res.json(posts);
+    res.json({
+      posts,
+      currentPage: page,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
+      hasMore: skip + posts.length < totalPosts
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -148,12 +157,27 @@ const deletePost = async (req, res) => {
 };
 
 const getAllPosts = async (req, res) => {
-  console.log('getAllPosts called');
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalPosts = await Post.countDocuments();
     const posts = await Post.find()
       .populate('author', 'username fullName avatar')
-      .sort({ createdAt: -1 });
-    res.json(posts);
+      .populate('tags', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+
+    res.json({
+      posts,
+      currentPage: page,
+      totalPages: Math.ceil(totalPosts / limit),
+      totalPosts,
+      hasMore: skip + posts.length < totalPosts
+    });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }

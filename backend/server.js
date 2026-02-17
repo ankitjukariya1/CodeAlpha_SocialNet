@@ -89,25 +89,42 @@ app.use(mongoSanitize());
 // Data sanitization against XSS
 app.use(xss());
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use(express.static(path.join(__dirname, "../frontend")));
+// Serve static files BEFORE routes
+const uploadsPath = path.join(__dirname, "uploads");
+const frontendPath = path.join(__dirname, "../frontend");
+console.log("Uploads path:", uploadsPath);
+console.log("Frontend path:", frontendPath);
 
+app.use("/uploads", express.static(uploadsPath));
+app.use(express.static(frontendPath, { 
+  index: false, // Don't serve index.html automatically
+  setHeaders: (res, filepath) => {
+    if (filepath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
+
+// Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/socialmedia")
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.log("MongoDB connection error:", err));
 
+// API Routes
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/tags", tagRoutes);
 
-// Only serve frontend for non-API routes
+// SPA catch-all - serve index.html for non-API, non-static routes
 app.get("*", (req, res, next) => {
+  // Skip API routes
   if (req.originalUrl.startsWith("/api/")) {
     return next();
   }
+  // Serve index.html for all other routes (SPA)
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 

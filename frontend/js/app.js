@@ -132,9 +132,7 @@ async function loadAllPublicPosts() {
 window.loadAllPublicPosts = loadAllPublicPosts;
 
 function renderPublicPost(post) {
-  const avatarUrl = post.author?.avatar
-    ? API_BASE + post.author.avatar
-    : "https://via.placeholder.com/40";
+  const avatarUrl = getAvatarUrl(post.author || {});
   const imageHtml = post.image
     ? `<div class="post-image"><img src="${API_BASE}${post.image}" alt="Post Image" style="max-width:100%;border-radius:10px;margin:10px 0;"></div>`
     : "";

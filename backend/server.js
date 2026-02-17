@@ -33,6 +33,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrcAttr: ["'unsafe-inline'"], // Allow onclick handlers
         styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
         fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
         imgSrc: ["'self'", "data:", "https:", "http:"],

@@ -1,5 +1,5 @@
-import * as api from './api.js';
-import { showLogin, showRegister, logout, login, register } from './auth.js';
+import * as api from "./api.js";
+import { showLogin, showRegister, logout, login, register } from "./auth.js";
 
 window.showLogin = showLogin;
 window.showRegister = showRegister;
@@ -7,47 +7,51 @@ window.login = login;
 window.register = register;
 window.logout = logout;
 
-const API_BASE = 'http://localhost:5002';
+const API_BASE =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5002"
+    : "";
 let myFollowingIds = [];
 let allTags = [];
 let selectedTagIds = [];
 
-document.addEventListener('DOMContentLoaded', async () => {
-    document.getElementById('authContainer').style.display = 'none';
-    document.getElementById('navbar').style.display = '';
-    document.getElementById('mainContent').style.display = '';
+document.addEventListener("DOMContentLoaded", async () => {
+  document.getElementById("authContainer").style.display = "none";
+  document.getElementById("navbar").style.display = "";
+  document.getElementById("mainContent").style.display = "";
 
-    if (localStorage.getItem('token')) {
-        // Logged in user - show personalized feed, hide hero
-        hideHeroSection();
-        loadFeed();
-        setupSearch();
-        updateNavbarForLoggedInUser();
-    } else {
-        // Guest user - show hero and public posts
-        showHeroSection();
-        loadPublicFeed();
-        updateNavbarForGuest();
-    }
+  if (localStorage.getItem("token")) {
+    // Logged in user - show personalized feed, hide hero
+    hideHeroSection();
+    loadFeed();
+    setupSearch();
+    updateNavbarForLoggedInUser();
+  } else {
+    // Guest user - show hero and public posts
+    showHeroSection();
+    loadPublicFeed();
+    updateNavbarForGuest();
+  }
 });
 
 function showHeroSection() {
-    const hero = document.getElementById('heroSection');
-    const features = document.getElementById('featuresSection');
-    if (hero) hero.style.display = 'block';
-    if (features) features.style.display = 'block';
+  const hero = document.getElementById("heroSection");
+  const features = document.getElementById("featuresSection");
+  if (hero) hero.style.display = "block";
+  if (features) features.style.display = "block";
 }
 
 function hideHeroSection() {
-    const hero = document.getElementById('heroSection');
-    const features = document.getElementById('featuresSection');
-    if (hero) hero.style.display = 'none';
-    if (features) features.style.display = 'none';
+  const hero = document.getElementById("heroSection");
+  const features = document.getElementById("featuresSection");
+  if (hero) hero.style.display = "none";
+  if (features) features.style.display = "none";
 }
 
 function updateNavbarForLoggedInUser() {
-    document.getElementById('navSearch').style.display = '';
-    document.querySelector('.nav-menu').innerHTML = `
+  document.getElementById("navSearch").style.display = "";
+  document.querySelector(".nav-menu").innerHTML = `
         <button class="nav-btn" onclick="showFeed()">
             <i class="fas fa-home"></i> Feed
         </button>
@@ -64,8 +68,8 @@ function updateNavbarForLoggedInUser() {
 }
 
 function updateNavbarForGuest() {
-    document.getElementById('navSearch').style.display = 'none';
-    document.querySelector('.nav-menu').innerHTML = `
+  document.getElementById("navSearch").style.display = "none";
+  document.querySelector(".nav-menu").innerHTML = `
         <button class="nav-btn" onclick="showLoginPage()">
             <i class="fas fa-sign-in-alt"></i> Login
         </button>
@@ -75,52 +79,72 @@ function updateNavbarForGuest() {
     `;
 }
 
-window.showLoginPage = function() {
-    console.log('showLoginPage called');
-    document.getElementById('mainContent').style.display = 'none';
-    document.getElementById('authContainer').style.display = '';
-    showLogin();
+window.showLoginPage = function () {
+  console.log("showLoginPage called");
+  document.getElementById("mainContent").style.display = "none";
+  document.getElementById("authContainer").style.display = "";
+  showLogin();
 };
 
-window.showRegisterPage = function() {
-    console.log('showRegisterPage called');
-    document.getElementById('mainContent').style.display = 'none';
-    document.getElementById('authContainer').style.display = '';
-    showRegister();
+window.showRegisterPage = function () {
+  console.log("showRegisterPage called");
+  document.getElementById("mainContent").style.display = "none";
+  document.getElementById("authContainer").style.display = "";
+  showRegister();
 };
 
 function loadPublicFeed() {
-    const postsContainer = document.getElementById('postsContainer');
-    postsContainer.innerHTML = '<div id="publicPosts"></div>';
-    loadAllPublicPosts();
+  const postsContainer = document.getElementById("postsContainer");
+  postsContainer.innerHTML = '<div id="publicPosts"></div>';
+  loadAllPublicPosts();
 }
 
 async function loadAllPublicPosts() {
-    const publicPostsContainer = document.querySelector('#publicPosts');
-    publicPostsContainer.innerHTML = 'Loading posts...';
-    try {
-        const posts = await api.getAllPosts();
-        if (!Array.isArray(posts) || posts.length === 0) {
-            publicPostsContainer.innerHTML = '<p>No posts yet. Be the first to post!</p>';
-            return;
-        }
-        publicPostsContainer.innerHTML = posts.map(post => renderPublicPost(post)).join('');
-    } catch (err) {
-        console.error('Failed to load public posts:', err);
-        publicPostsContainer.innerHTML = '<p>Failed to load posts.</p>';
+  const publicPostsContainer = document.querySelector("#publicPosts");
+  publicPostsContainer.innerHTML =
+    '<div class="loading-text">Loading posts...</div>';
+  try {
+    const response = await api.getAllPosts();
+    const posts = Array.isArray(response) ? response : response.posts || [];
+    if (posts.length === 0) {
+      publicPostsContainer.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-pen-fancy empty-state-icon"></i>
+                    <h3>No posts yet</h3>
+                    <p>Be the first to share something! Sign up and create a post.</p>
+                </div>`;
+      return;
     }
+    publicPostsContainer.innerHTML = posts
+      .map((post) => renderPublicPost(post))
+      .join("");
+  } catch (err) {
+    console.error("Failed to load public posts:", err);
+    publicPostsContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-circle empty-state-icon"></i>
+                <h3>Could not load posts</h3>
+                <p>${err.message || "Something went wrong. Please try again later."}</p>
+                <button class="retry-btn" onclick="loadAllPublicPosts()">Retry</button>
+            </div>`;
+  }
 }
+window.loadAllPublicPosts = loadAllPublicPosts;
 
 function renderPublicPost(post) {
-    const avatarUrl = post.author?.avatar ? API_BASE + post.author.avatar : 'https://via.placeholder.com/40';
-    const imageHtml = post.image ? `<div class="post-image"><img src="${API_BASE}${post.image}" alt="Post Image" style="max-width:100%;border-radius:10px;margin:10px 0;"></div>` : '';
-    
-    return `
+  const avatarUrl = post.author?.avatar
+    ? API_BASE + post.author.avatar
+    : "https://via.placeholder.com/40";
+  const imageHtml = post.image
+    ? `<div class="post-image"><img src="${API_BASE}${post.image}" alt="Post Image" style="max-width:100%;border-radius:10px;margin:10px 0;"></div>`
+    : "";
+
+  return `
     <div class="post-card">
         <div class="post-header">
             <div class="post-avatar"><img src="${avatarUrl}" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></div>
             <div class="post-author">
-                <h4>${post.author?.fullName || 'Unknown'} <span class="username">@${post.author?.username || 'unknown'}</span></h4>
+                <h4>${post.author?.fullName || "Unknown"} <span class="username">@${post.author?.username || "unknown"}</span></h4>
             </div>
             <div class="post-time">${new Date(post.createdAt).toLocaleString()}</div>
         </div>
@@ -134,74 +158,88 @@ function renderPublicPost(post) {
     </div>`;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Always run on create post page, regardless of folder
-    if (window.location.pathname.endsWith('create-post.html') || window.location.pathname.endsWith('/create-post.html')) {
-        selectedTagIds = []; // Reset on page load
-        setupTagSelector();
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  // Always run on create post page, regardless of folder
+  if (
+    window.location.pathname.endsWith("create-post.html") ||
+    window.location.pathname.endsWith("/create-post.html")
+  ) {
+    selectedTagIds = []; // Reset on page load
+    setupTagSelector();
+  }
 });
 
 async function loadFeed() {
-    const postsContainer = document.getElementById('postsContainer');
-    postsContainer.innerHTML = 'Loading...';
-    try {
-        // Fetch current user profile to get following list
-        const myProfile = await api.getProfile();
-        myFollowingIds = (myProfile.following || []).map(u => u._id);
+  const postsContainer = document.getElementById("postsContainer");
+  postsContainer.innerHTML =
+    '<div class="loading-text">Loading your feed...</div>';
+  try {
+    // Fetch current user profile to get following list
+    const myProfile = await api.getProfile();
+    myFollowingIds = (myProfile.following || []).map((u) => u._id);
 
-        const posts = await api.getFeedPosts();
-        console.log('Fetched posts:', posts);
-        if (!Array.isArray(posts)) {
-            console.error('Posts is not an array:', posts);
-            postsContainer.innerHTML = 'Error: Posts data is invalid.';
-            return;
-        }
-        if (posts.length === 0) {
-            console.warn('No posts found.');
-            postsContainer.innerHTML = 'No posts to display.';
-            return;
-        }
-        postsContainer.innerHTML = posts.map(post => {
-            try {
-                return renderPost(post, myProfile._id);
-            } catch (err) {
-                console.error('Error rendering post:', post, err);
-                return '<div>Error rendering post</div>';
-            }
-        }).join('');
-    } catch (err) {
-        console.error('Failed to load posts:', err);
-        postsContainer.innerHTML = 'Failed to load posts.';
+    const response = await api.getFeedPosts();
+    const posts = Array.isArray(response) ? response : response.posts || [];
+    console.log("Fetched posts:", posts);
+    if (posts.length === 0) {
+      postsContainer.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-home empty-state-icon"></i>
+                    <h3>Your feed is empty</h3>
+                    <p>Follow some users or create your first post to see content here!</p>
+                    <button class="retry-btn" onclick="window.location.href='pages/create-post.html'">Create Post</button>
+                </div>`;
+      return;
     }
+    postsContainer.innerHTML = posts
+      .map((post) => {
+        try {
+          return renderPost(post, myProfile._id);
+        } catch (err) {
+          console.error("Error rendering post:", post, err);
+          return "";
+        }
+      })
+      .join("");
+  } catch (err) {
+    console.error("Failed to load posts:", err);
+    postsContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-circle empty-state-icon"></i>
+                <h3>Could not load feed</h3>
+                <p>${err.message || "Something went wrong. Please try again later."}</p>
+                <button class="retry-btn" onclick="loadFeed()">Retry</button>
+            </div>`;
+  }
 }
+window.loadFeed = loadFeed;
 
 function renderPost(post, myUserId) {
-    const avatarUrl = getAvatarUrl(post.author);
+  const avatarUrl = getAvatarUrl(post.author);
 
-    // Don't show follow button for own posts
-    let followBtn = '';
-    if (post.author._id !== myUserId) {
-        if (myFollowingIds.includes(post.author._id)) {
-            followBtn = `
+  // Don't show follow button for own posts
+  let followBtn = "";
+  if (post.author._id !== myUserId) {
+    if (myFollowingIds.includes(post.author._id)) {
+      followBtn = `
                 <button class="follow-btn" style="margin-left:10px;font-size:12px;padding:2px 10px; background:#28a745; color:white; cursor:default;" disabled>
                     Followed
                 </button>
             `;
-        } else {
-            followBtn = `
+    } else {
+      followBtn = `
                 <button class="follow-btn" style="margin-left:10px;font-size:12px;padding:2px 10px;"
                     onclick="followFromFeed(event, '${post.author._id}')">
                     Follow
                 </button>
             `;
-        }
     }
+  }
 
-    const imageHtml = post.image
-        ? `<div class="post-image"><img src="${API_BASE}${post.image}" alt="Post Image" style="max-width:100%;border-radius:10px;margin:10px 0;"></div>`
-        : '';
-    return `
+  const imageHtml = post.image
+    ? `<div class="post-image"><img src="${API_BASE}${post.image}" alt="Post Image" style="max-width:100%;border-radius:10px;margin:10px 0;"></div>`
+    : "";
+  return `
     <div class="post-card">
         <div class="post-header">
             <div class="post-avatar"><img src="${avatarUrl}" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></div>
@@ -220,72 +258,75 @@ function renderPost(post, myUserId) {
     </div>`;
 }
 
-window.createPost = async function(event) {
-    event.preventDefault();
-    const content = document.getElementById('postContent').value;
-    const imageInput = document.getElementById('postImage');
-    const imageFile = imageInput.files[0];
+window.createPost = async function (event) {
+  event.preventDefault();
+  const content = document.getElementById("postContent").value;
+  const imageInput = document.getElementById("postImage");
+  const imageFile = imageInput.files[0];
 
-    if (!content.trim()) return;
+  if (!content.trim()) return;
 
-    if (selectedTagIds.length < 3) {
-        alert('Please select at least 3 tags for your post.');
-        return;
-    }
-    if (selectedTagIds.length > 7) {
-        alert('You can select up to 7 tags only.');
-        return;
-    }
+  if (selectedTagIds.length > 7) {
+    alert("You can select up to 7 tags only.");
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append('content', content);
-    if (imageFile) formData.append('image', imageFile);
-    selectedTagIds.forEach(tagId => formData.append('tags[]', tagId));
+  const formData = new FormData();
+  formData.append("content", content);
+  if (imageFile) formData.append("image", imageFile);
+  selectedTagIds.forEach((tagId) => formData.append("tags[]", tagId));
 
-    try {
-        await api.createPostWithImage(formData);
-        document.getElementById('postContent').value = '';
-        imageInput.value = '';
-        window.location.href = '../index.html';
-    } catch (err) {
-        console.warn('Suppressed error:', err);
-        window.location.href = '../index.html';
-    }
+  try {
+    await api.createPostWithImage(formData);
+    document.getElementById("postContent").value = "";
+    imageInput.value = "";
+    window.location.href = "../index.html";
+  } catch (err) {
+    console.warn("Suppressed error:", err);
+    window.location.href = "../index.html";
+  }
 };
 
-window.likePost = async function(postId) {
-    try {
-        await api.likePost(postId);
-        loadFeed();
-    } catch (err) {
-        alert(err.message || 'Failed to like post');
-    }
+window.likePost = async function (postId) {
+  try {
+    await api.likePost(postId);
+    loadFeed();
+  } catch (err) {
+    alert(err.message || "Failed to like post");
+  }
 };
 
-window.showComments = async function(postId) {
-    const section = document.getElementById(`comments-${postId}`);
-    if (section.style.display === 'none') {
-        section.style.display = '';
-        section.innerHTML = 'Loading...';
-        try {
-            const comments = await api.getComments(postId);
-            section.innerHTML = comments.map(renderComment).join('') + `
-                <form onsubmit="addComment(event, '${postId}')">
+window.showComments = async function (postId) {
+  const section = document.getElementById(`comments-${postId}`);
+  if (section.style.display === "none") {
+    section.style.display = "";
+    section.innerHTML = '<div class="loading-text">Loading comments...</div>';
+    try {
+      const comments = await api.getComments(postId);
+      const commentsHtml =
+        comments && comments.length > 0
+          ? comments.map(renderComment).join("")
+          : '<p style="color:#999;padding:8px 0;">No comments yet. Be the first!</p>';
+      section.innerHTML =
+        commentsHtml +
+        `
+                <form onsubmit="addComment(event, '${postId}')" class="comment-form">
                     <input type="text" id="commentInput-${postId}" placeholder="Add a comment..." required>
                     <button type="submit">Comment</button>
                 </form>
             `;
-        } catch (err) {
-            section.innerHTML = 'Failed to load comments.';
-        }
-    } else {
-        section.style.display = 'none';
+    } catch (err) {
+      section.innerHTML =
+        '<p style="color:#e74c3c;">Failed to load comments.</p>';
     }
+  } else {
+    section.style.display = "none";
+  }
 };
 
 function renderComment(comment) {
-    const avatarUrl = getAvatarUrl(comment.author);
-    return `
+  const avatarUrl = getAvatarUrl(comment.author);
+  return `
     <div class="comment">
         <div class="comment-avatar"><img src="${avatarUrl}" alt="avatar" style="width:30px;height:30px;border-radius:50%;object-fit:cover;"></div>
         <div class="comment-content">
@@ -295,129 +336,163 @@ function renderComment(comment) {
     </div>`;
 }
 
-window.addComment = async function(event, postId) {
-    event.preventDefault();
-    const input = document.getElementById(`commentInput-${postId}`);
-    try {
-        await api.createComment(postId, input.value);
-        input.value = '';
-        showComments(postId);
-    } catch (err) {
-        alert(err.message || 'Failed to add comment');
-    }
+window.addComment = async function (event, postId) {
+  event.preventDefault();
+  const input = document.getElementById(`commentInput-${postId}`);
+  try {
+    await api.createComment(postId, input.value);
+    input.value = "";
+    showComments(postId);
+  } catch (err) {
+    alert(err.message || "Failed to add comment");
+  }
 };
 
 function setupSearch() {
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    searchInput.addEventListener('input', async () => {
-        const query = searchInput.value.trim();
-        if (!query) {
-            searchResults.style.display = 'none';
-            return;
+  const searchInput = document.getElementById("searchInput");
+  const searchResults = document.getElementById("searchResults");
+  let searchTimeout;
+  searchInput.addEventListener("input", async () => {
+    const query = searchInput.value.trim();
+    if (!query) {
+      searchResults.style.display = "none";
+      return;
+    }
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+      try {
+        const users = await api.searchUsers(query);
+        if (!users || users.length === 0) {
+          searchResults.innerHTML =
+            '<div class="search-result-item" style="color:#999;cursor:default;">No users found</div>';
+          searchResults.style.display = "";
+          return;
         }
-        try {
-            const users = await api.searchUsers(query);
-            searchResults.innerHTML = users.map(u =>
-                `<div class="search-result-item" onclick="viewUserProfile('${u._id}')">
-                    <i class="fas fa-user"></i> ${u.fullName} (@${u.username})
-                </div>`
-            ).join('');
-            searchResults.style.display = '';
-        } catch {
-            searchResults.innerHTML = '';
-            searchResults.style.display = 'none';
-        }
-    });
+        searchResults.innerHTML = users
+          .map(
+            (u) =>
+              `<div class="search-result-item" onclick="viewUserProfile('${u._id}')">
+                        <i class="fas fa-user"></i> ${u.fullName} (@${u.username})
+                    </div>`,
+          )
+          .join("");
+        searchResults.style.display = "";
+      } catch {
+        searchResults.innerHTML = "";
+        searchResults.style.display = "none";
+      }
+    }, 300);
+  });
 }
 
-window.viewUserProfile = async function(userId) {
-    document.getElementById('feedSection').style.display = 'none';
-    document.getElementById('profileSection').style.display = 'none';
-    document.getElementById('userProfileSection').style.display = '';
-    try {
-        const { user, posts } = await api.getUserProfile(userId);
-        document.getElementById('userProfileName').textContent = user.fullName;
-        document.getElementById('userProfileUsername').textContent = '@' + user.username;
-        document.getElementById('userProfileBio').textContent = user.bio || '';
-        document.getElementById('userProfilePosts').textContent = (user.postsCount || 0) + ' Posts';
-        document.getElementById('userProfileFollowers').textContent = (user.followers?.length || 0) + ' Followers';
-        document.getElementById('userProfileFollowing').textContent = (user.following?.length || 0) + ' Following';
-        document.getElementById('viewUserPostsContainer').innerHTML = posts.map(renderPost).join('');
-        // Show follow button if not self
-        const myProfile = await api.getProfile();
-        const followBtn = document.getElementById('followBtn');
-        if (user._id === myProfile._id) {
-            followBtn.style.display = 'none';
-        } else {
-            followBtn.style.display = '';
-            if (user.followers.some(f => f._id === myProfile._id)) {
-                followBtn.textContent = 'Unfollow';
-                followBtn.onclick = async () => {
-                    await api.unfollowUser(user._id);
-                    viewUserProfile(user._id);
-                };
-            } else {
-                followBtn.textContent = 'Follow';
-                followBtn.onclick = async () => {
-                    await api.followUser(user._id);
-                    viewUserProfile(user._id);
-                };
-            }
-        }
-        document.querySelector('#userProfileSection .profile-avatar').innerHTML =
-            `<img src="${getAvatarUrl(user)}" alt="avatar" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
-    } catch (err) {
-        alert('Failed to load user profile');
+window.viewUserProfile = async function (userId) {
+  document.getElementById("feedSection").style.display = "none";
+  document.getElementById("profileSection").style.display = "none";
+  document.getElementById("userProfileSection").style.display = "";
+  try {
+    const { user, posts } = await api.getUserProfile(userId);
+    document.getElementById("userProfileName").textContent = user.fullName;
+    document.getElementById("userProfileUsername").textContent =
+      "@" + user.username;
+    document.getElementById("userProfileBio").textContent = user.bio || "";
+    document.getElementById("userProfilePosts").textContent =
+      (user.postsCount || 0) + " Posts";
+    document.getElementById("userProfileFollowers").textContent =
+      (user.followers?.length || 0) + " Followers";
+    document.getElementById("userProfileFollowing").textContent =
+      (user.following?.length || 0) + " Following";
+    document.getElementById("viewUserPostsContainer").innerHTML =
+      posts.length > 0
+        ? posts.map((p) => renderPost(p, myProfile._id)).join("")
+        : `<div class="empty-state">
+                    <i class="fas fa-camera empty-state-icon"></i>
+                    <h3>No posts yet</h3>
+                    <p>This user hasn't posted anything yet.</p>
+                  </div>`;
+    // Show follow button if not self
+    const myProfile = await api.getProfile();
+    const followBtn = document.getElementById("followBtn");
+    if (user._id === myProfile._id) {
+      followBtn.style.display = "none";
+    } else {
+      followBtn.style.display = "";
+      if (user.followers.some((f) => f._id === myProfile._id)) {
+        followBtn.textContent = "Unfollow";
+        followBtn.onclick = async () => {
+          await api.unfollowUser(user._id);
+          viewUserProfile(user._id);
+        };
+      } else {
+        followBtn.textContent = "Follow";
+        followBtn.onclick = async () => {
+          await api.followUser(user._id);
+          viewUserProfile(user._id);
+        };
+      }
     }
+    document.querySelector("#userProfileSection .profile-avatar").innerHTML =
+      `<img src="${getAvatarUrl(user)}" alt="avatar" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
+  } catch (err) {
+    alert("Failed to load user profile");
+  }
 };
 
-window.showFeed = function() {
-    document.getElementById('feedSection').style.display = '';
-    document.getElementById('profileSection').style.display = 'none';
-    document.getElementById('userProfileSection').style.display = 'none';
-    loadFeed();
+window.showFeed = function () {
+  document.getElementById("feedSection").style.display = "";
+  document.getElementById("profileSection").style.display = "none";
+  document.getElementById("userProfileSection").style.display = "none";
+  loadFeed();
 };
 
-window.showProfile = async function() {
-    document.getElementById('feedSection').style.display = 'none';
-    document.getElementById('profileSection').style.display = '';
-    document.getElementById('userProfileSection').style.display = 'none';
-    await loadProfile();
+window.showProfile = async function () {
+  document.getElementById("feedSection").style.display = "none";
+  document.getElementById("profileSection").style.display = "";
+  document.getElementById("userProfileSection").style.display = "none";
+  await loadProfile();
 };
 
 async function loadProfile() {
-    try {
-        const user = await api.getProfile();
-        document.getElementById('profileName').textContent = user.fullName;
-        document.getElementById('profileUsername').textContent = '@' + user.username;
-        document.getElementById('profileBio').textContent = user.bio || '';
-        document.getElementById('profilePosts').textContent = (user.postsCount || 0) + ' Posts';
-        document.getElementById('profileFollowers').textContent = (user.followers?.length || 0) + ' Followers';
-        document.getElementById('profileFollowing').textContent = (user.following?.length || 0) + ' Following';
-        document.querySelector('#profileSection .profile-avatar').innerHTML =
-            `<img src="${getAvatarUrl(user)}" alt="avatar" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
+  try {
+    const user = await api.getProfile();
+    document.getElementById("profileName").textContent = user.fullName;
+    document.getElementById("profileUsername").textContent =
+      "@" + user.username;
+    document.getElementById("profileBio").textContent = user.bio || "";
+    document.getElementById("profilePosts").textContent =
+      (user.postsCount || 0) + " Posts";
+    document.getElementById("profileFollowers").textContent =
+      (user.followers?.length || 0) + " Followers";
+    document.getElementById("profileFollowing").textContent =
+      (user.following?.length || 0) + " Following";
+    document.querySelector("#profileSection .profile-avatar").innerHTML =
+      `<img src="${getAvatarUrl(user)}" alt="avatar" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
 
-        // Load user's posts
-        const { posts } = await api.getUserProfile(user._id);
-        document.getElementById('userPostsContainer').innerHTML = posts.map(renderOwnPost).join('');
-    } catch (err) {
-        if (err && err.message && err.message !== 'Failed to fetch') {
-        alert(err.message);
-    } else {
-        // Otherwise, just log
-        console.warn('Non-critical error:', err);
+    // Load user's posts
+    const { posts } = await api.getUserProfile(user._id);
+    document.getElementById("userPostsContainer").innerHTML =
+      posts && posts.length > 0
+        ? posts.map(renderOwnPost).join("")
+        : `<div class="empty-state">
+                    <i class="fas fa-edit empty-state-icon"></i>
+                    <h3>No posts yet</h3>
+                    <p>You haven't created any posts. Share your first thought!</p>
+                    <button class="retry-btn" onclick="window.location.href='pages/create-post.html'">Create Post</button>
+                  </div>`;
+  } catch (err) {
+    console.error("Failed to load profile:", err);
+    if (err && err.message) {
+      alert(err.message);
     }
-    }
+  }
 }
 
 // Helper to render own post with edit/delete
 function renderOwnPost(post) {
-    const avatarUrl = getAvatarUrl(post.author);
-    const imageHtml = post.image
-        ? `<div class="post-image"><img src="${API_BASE}${post.image}" alt="Post Image" style="max-width:100%;border-radius:10px;margin:10px 0;"></div>`
-        : '';
-    return `
+  const avatarUrl = getAvatarUrl(post.author);
+  const imageHtml = post.image
+    ? `<div class="post-image"><img src="${API_BASE}${post.image}" alt="Post Image" style="max-width:100%;border-radius:10px;margin:10px 0;"></div>`
+    : "";
+  return `
     <div class="post-card">
         <div class="post-header">
             <div class="post-avatar"><img src="${avatarUrl}" alt="avatar" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></div>
@@ -435,44 +510,44 @@ function renderOwnPost(post) {
     </div>`;
 }
 
-window.followFromFeed = async function(event, userId) {
-    event.stopPropagation();
-    try {
-        await api.followUser(userId);
-        alert('Followed!');
-        loadFeed();
-    } catch (err) {
-        alert(err.message || 'Failed to follow user');
-    }
+window.followFromFeed = async function (event, userId) {
+  event.stopPropagation();
+  try {
+    await api.followUser(userId);
+    alert("Followed!");
+    loadFeed();
+  } catch (err) {
+    alert(err.message || "Failed to follow user");
+  }
 };
 
-window.updateProfile = async function(event) {
-    event.preventDefault();
-    const fullName = document.getElementById('editFullName').value;
-    const username = document.getElementById('editUsername').value;
-    const bio = document.getElementById('editBio').value;
-    const avatarInput = document.getElementById('editAvatar');
-    try {
-        await api.updateProfile(fullName, bio, username);
-        if (avatarInput.files && avatarInput.files[0]) {
-            const formData = new FormData();
-            formData.append('avatar', avatarInput.files[0]);
-            await api.uploadAvatar(formData);
-        }
-        closeEditProfile();
-        await loadProfile();
-    } catch (err) {
-        if (err && err.message) {
-            alert(err.message);
-        } else {
-            alert('Failed to update profile. Please check your network connection.');
-        }
+window.updateProfile = async function (event) {
+  event.preventDefault();
+  const fullName = document.getElementById("editFullName").value;
+  const username = document.getElementById("editUsername").value;
+  const bio = document.getElementById("editBio").value;
+  const avatarInput = document.getElementById("editAvatar");
+  try {
+    await api.updateProfile(fullName, bio, username);
+    if (avatarInput.files && avatarInput.files[0]) {
+      const formData = new FormData();
+      formData.append("avatar", avatarInput.files[0]);
+      await api.uploadAvatar(formData);
     }
+    closeEditProfile();
+    await loadProfile();
+  } catch (err) {
+    if (err && err.message) {
+      alert(err.message);
+    } else {
+      alert("Failed to update profile. Please check your network connection.");
+    }
+  }
 };
 
-window.showEditPostModal = function(postId, content) {
-    const decodedContent = decodeURIComponent(content);
-    const modalHtml = `
+window.showEditPostModal = function (postId, content) {
+  const decodedContent = decodeURIComponent(content);
+  const modalHtml = `
         <div class="modal" id="editPostModal" style="display:flex;">
             <div class="modal-content">
                 <span class="close" onclick="closeEditPostModal()">&times;</span>
@@ -493,139 +568,151 @@ window.showEditPostModal = function(postId, content) {
             </div>
         </div>
     `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
 };
 
-window.closeEditPostModal = function() {
-    const modal = document.getElementById('editPostModal');
-    if (modal) modal.remove();
+window.closeEditPostModal = function () {
+  const modal = document.getElementById("editPostModal");
+  if (modal) modal.remove();
 };
 
-window.editPost = async function(event, postId) {
-    event.preventDefault();
-    const content = document.getElementById('editPostContent').value;
-    const imageInput = document.getElementById('editPostImage');
-    const formData = new FormData();
-    formData.append('content', content);
-    if (imageInput.files[0]) formData.append('image', imageInput.files[0]);
-    try {
-        await api.editPost(postId, formData);
-        closeEditPostModal();
-        await loadProfile();
-    } catch (err) {
-        alert(err.message || 'Failed to edit post');
-    }
+window.editPost = async function (event, postId) {
+  event.preventDefault();
+  const content = document.getElementById("editPostContent").value;
+  const imageInput = document.getElementById("editPostImage");
+  const formData = new FormData();
+  formData.append("content", content);
+  if (imageInput.files[0]) formData.append("image", imageInput.files[0]);
+  try {
+    await api.editPost(postId, formData);
+    closeEditPostModal();
+    await loadProfile();
+  } catch (err) {
+    alert(err.message || "Failed to edit post");
+  }
 };
 
-window.deletePost = async function(postId) {
-    if (!confirm('Are you sure you want to delete this post?')) return;
-    try {
-        await api.deletePost(postId);
-        await loadProfile();
-    } catch (err) {
-        alert(err.message || 'Failed to delete post');
-    }
+window.deletePost = async function (postId) {
+  if (!confirm("Are you sure you want to delete this post?")) return;
+  try {
+    await api.deletePost(postId);
+    await loadProfile();
+  } catch (err) {
+    alert(err.message || "Failed to delete post");
+  }
 };
 
-window.editProfile = function() {
-    // Fill modal fields with current profile data
-    api.getProfile().then(user => {
-        document.getElementById('editFullName').value = user.fullName || '';
-        document.getElementById('editUsername').value = user.username || '';
-        document.getElementById('editBio').value = user.bio || '';
-        document.getElementById('editAvatar').value = '';
-        document.getElementById('editProfileModal').style.display = 'flex';
-    });
+window.editProfile = function () {
+  // Fill modal fields with current profile data
+  api.getProfile().then((user) => {
+    document.getElementById("editFullName").value = user.fullName || "";
+    document.getElementById("editUsername").value = user.username || "";
+    document.getElementById("editBio").value = user.bio || "";
+    document.getElementById("editAvatar").value = "";
+    document.getElementById("editProfileModal").style.display = "flex";
+  });
 };
 
-window.closeEditProfile = function() {
-    document.getElementById('editProfileModal').style.display = 'none';
+window.closeEditProfile = function () {
+  document.getElementById("editProfileModal").style.display = "none";
 };
 
 function getAvatarUrl(user) {
-    if (user.avatar && user.avatar.startsWith('/uploads/')) {
-        return API_BASE + user.avatar;
-    }
-    return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.fullName || user.username || 'U');
+  if (user.avatar && user.avatar.startsWith("/uploads/")) {
+    return API_BASE + user.avatar;
+  }
+  return (
+    "https://ui-avatars.com/api/?name=" +
+    encodeURIComponent(user.fullName || user.username || "U")
+  );
 }
 
 async function setupTagSelector() {
-    try {
-        allTags = await api.getAllTags();
-        console.log('Fetched tags:', allTags);
-    } catch (err) {
-        allTags = [];
-        console.error('Failed to fetch tags:', err);
+  try {
+    allTags = await api.getAllTags();
+    console.log("Fetched tags:", allTags);
+  } catch (err) {
+    allTags = [];
+    console.error("Failed to fetch tags:", err);
+  }
+  const tagSearch = document.getElementById("tagSearch");
+  const tagSuggestions = document.getElementById("tagSuggestions");
+  const selectedTagsDiv = document.getElementById("selectedTags");
+
+  function renderSelectedTags() {
+    selectedTagsDiv.innerHTML = selectedTagIds
+      .map((id) => {
+        const tag = allTags.find((t) => t._id === id);
+        return `<span class="tag-chip">${tag.name} <span class="remove-tag" data-id="${id}">&times;</span></span>`;
+      })
+      .join(" ");
+  }
+
+  function updateSuggestions(query = "") {
+    let filtered;
+    if (!query) {
+      filtered = allTags.filter((tag) => !selectedTagIds.includes(tag._id));
+    } else {
+      filtered = allTags.filter(
+        (tag) =>
+          tag.name.toLowerCase().includes(query) &&
+          !selectedTagIds.includes(tag._id),
+      );
     }
-    const tagSearch = document.getElementById('tagSearch');
-    const tagSuggestions = document.getElementById('tagSuggestions');
-    const selectedTagsDiv = document.getElementById('selectedTags');
+    tagSuggestions.innerHTML = filtered
+      .map(
+        (tag) =>
+          `<div class="search-result-item" data-id="${tag._id}">${tag.name}</div>`,
+      )
+      .join("");
+    tagSuggestions.style.display = filtered.length ? "" : "none";
+  }
 
-    function renderSelectedTags() {
-        selectedTagsDiv.innerHTML = selectedTagIds.map(id => {
-            const tag = allTags.find(t => t._id === id);
-            return `<span class="tag-chip">${tag.name} <span class="remove-tag" data-id="${id}">&times;</span></span>`;
-        }).join(' ');
+  // Show all tags on focus if less than 7 selected
+  tagSearch.addEventListener("focus", () => {
+    if (selectedTagIds.length < 7) {
+      updateSuggestions("");
     }
+  });
 
-    function updateSuggestions(query = '') {
-        let filtered;
-        if (!query) {
-            filtered = allTags.filter(tag => !selectedTagIds.includes(tag._id));
-        } else {
-            filtered = allTags.filter(tag =>
-                tag.name.toLowerCase().includes(query) && !selectedTagIds.includes(tag._id)
-            );
-        }
-        tagSuggestions.innerHTML = filtered.map(tag =>
-            `<div class="search-result-item" data-id="${tag._id}">${tag.name}</div>`
-        ).join('');
-        tagSuggestions.style.display = filtered.length ? '' : 'none';
+  // Filter tags as user types
+  tagSearch.addEventListener("input", () => {
+    if (selectedTagIds.length >= 7) {
+      tagSearch.value = "";
+      tagSuggestions.style.display = "none";
+      return;
     }
+    updateSuggestions(tagSearch.value.trim().toLowerCase());
+  });
 
-    // Show all tags on focus if less than 7 selected
-    tagSearch.addEventListener('focus', () => {
-        if (selectedTagIds.length < 7) {
-            updateSuggestions('');
-        }
-    });
+  // Hide dropdown on blur (with delay for click)
+  tagSearch.addEventListener("blur", () => {
+    setTimeout(() => {
+      tagSuggestions.style.display = "none";
+    }, 200);
+  });
 
-    // Filter tags as user types
-    tagSearch.addEventListener('input', () => {
-        if (selectedTagIds.length >= 7) {
-            tagSearch.value = '';
-            tagSuggestions.style.display = 'none';
-            return;
-        }
-        updateSuggestions(tagSearch.value.trim().toLowerCase());
-    });
+  // Add tag on click
+  tagSuggestions.addEventListener("click", (e) => {
+    if (e.target.classList.contains("search-result-item")) {
+      const tagId = e.target.getAttribute("data-id");
+      if (selectedTagIds.length < 7 && !selectedTagIds.includes(tagId)) {
+        selectedTagIds.push(tagId);
+        renderSelectedTags();
+      }
+      tagSearch.value = "";
+      tagSuggestions.style.display = "none";
+    }
+  });
 
-    // Hide dropdown on blur (with delay for click)
-    tagSearch.addEventListener('blur', () => {
-        setTimeout(() => { tagSuggestions.style.display = 'none'; }, 200);
-    });
+  // Remove tag on click
+  selectedTagsDiv.addEventListener("click", (e) => {
+    if (e.target.classList.contains("remove-tag")) {
+      const tagId = e.target.getAttribute("data-id");
+      selectedTagIds = selectedTagIds.filter((id) => id !== tagId);
+      renderSelectedTags();
+    }
+  });
 
-    // Add tag on click
-    tagSuggestions.addEventListener('click', (e) => {
-        if (e.target.classList.contains('search-result-item')) {
-            const tagId = e.target.getAttribute('data-id');
-            if (selectedTagIds.length < 7 && !selectedTagIds.includes(tagId)) {
-                selectedTagIds.push(tagId);
-                renderSelectedTags();
-            }
-            tagSearch.value = '';
-            tagSuggestions.style.display = 'none';
-        }
-    });
-
-    // Remove tag on click
-    selectedTagsDiv.addEventListener('click', (e) => {
-        if (e.target.classList.contains('remove-tag')) {
-            const tagId = e.target.getAttribute('data-id');
-            selectedTagIds = selectedTagIds.filter(id => id !== tagId);
-            renderSelectedTags();
-        }
-    });
-
-    renderSelectedTags();
+  renderSelectedTags();
 }
